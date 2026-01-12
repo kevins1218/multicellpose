@@ -81,7 +81,7 @@ with open("README.md", "r") as fh:
     long_description = fh.read()
 
 setup(
-    name="multimodal_cellpose",
+    name="multicellpose",
     license="BSD",
     author="Marius Pachitariu and Carsen Stringer -- Modified by Kevin Shen",
     author_email="stringerc@janelia.hhmi.org",
@@ -107,5 +107,5 @@ setup(
         "Operating System :: OS Independent",
     ),
     # UPDATE THIS LINE:
-    entry_points={'console_scripts': ['multimodal_cellpose = multimodal_cellpose.__main__:main']}
+    entry_points={'console_scripts': ['multicellpose = multicellpose.__main__:main']}
 )
