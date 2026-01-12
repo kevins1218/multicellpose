@@ -54,29 +54,30 @@ def _loss_fn_seg(lbl, y, device):
 
 def _reshape_norm(data, channel_axis=None, normalize_params={"normalize": False}):
     """
-    Reshapes and normalizes the input data.
-
-    Args:
-        data (list): List of input data, with channels axis first or last.
-        normalize_params (dict, optional): Dictionary of normalization parameters. Defaults to {"normalize": False}.
-
-    Returns:
-        list: List of reshaped and normalized data.
+    Reshapes and normalizes the input data for multimodal use.
     """
     data_new = []
     for td in data:
-        if td in data:
+        if td.ndim == 3:
+            # If channel_axis is not provided, we assume the smallest dimension is the channel axis
             channel_axis0 = channel_axis if channel_axis is not None else np.array(td.shape).argmin()
+            # Move channels to the front: (C, Y, X)
             td = np.moveaxis(td, channel_axis0, 0)
         elif td.ndim == 2:
+            # Add a channel dimension for grayscale/single-channel: (1, Y, X)
             td = td[np.newaxis, ...]
-    
+
+        # Ensure we are using float32 for normalization precision
+        td = td.astype(np.float32)
         data_new.append(td)
 
     data = data_new
-    if normalize_params["normalize"]:
+
+    # Apply multimodal-aware normalization
+    if normalize_params.get("normalize", False):
+        # We use axis=0 because we moved channels to the front above
         data = [
-            normalize_img(td, normalize=normalize_params, axis=0)
+            normalize_img(td, **normalize_params, axis=0)
             for td in data
         ]
     return data
