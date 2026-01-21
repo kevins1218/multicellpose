@@ -53,34 +53,36 @@ def _loss_fn_seg(lbl, y, device):
     return loss
 
 def _reshape_norm(data, channel_axis=None, normalize_params={"normalize": False}):
-    """
-    Reshapes and normalizes the input data for multimodal use.
-    """
     data_new = []
     for td in data:
+        # 1. Force 3D structure (C, Y, X)
         if td.ndim == 3:
-            # If channel_axis is not provided, we assume the smallest dimension is the channel axis
-            channel_axis0 = channel_axis if channel_axis is not None else np.array(td.shape).argmin()
-            # Move channels to the front: (C, Y, X)
-            td = np.moveaxis(td, channel_axis0, 0)
+            # Avoid moving axis if it's already at the front
+            actual_axis = channel_axis if channel_axis is not None else np.array(td.shape).argmin()
+            if actual_axis != 0:
+                td = np.moveaxis(td, actual_axis, 0)
         elif td.ndim == 2:
-            # Add a channel dimension for grayscale/single-channel: (1, Y, X)
             td = td[np.newaxis, ...]
 
-        # Ensure we are using float32 for normalization precision
+        # 2. Precision check - SAM backbones prefer float32
         td = td.astype(np.float32)
         data_new.append(td)
 
-    data = data_new
-
-    # Apply multimodal-aware normalization
+    # 3. Channel-wise Normalization
+    # For H&E + Transcripts, we usually want to normalize each channel to its own 1st/99th percentile
     if normalize_params.get("normalize", False):
-        # We use axis=0 because we moved channels to the front above
-        data = [
-            normalize_img(td, **normalize_params, axis=0)
-            for td in data
-        ]
-    return data
+        # We wrap the normalization in a loop to ensure each channel in the stack
+        # maintains its relative contrast independently.
+        normalized_data = []
+        for td in data_new:
+            # Custom normalization path: apply to each channel separately
+            # This prevents the H&E signal from over-shadowing sparse transcripts
+            for c in range(td.shape[0]):
+                td[c] = normalize_img(td[c], **normalize_params)
+            normalized_data.append(td)
+        return normalized_data
+
+    return data_new
 
 def _get_batch(inds, data=None, labels=None, files=None, labels_files=None,
                normalize_params={"normalize": False}):
