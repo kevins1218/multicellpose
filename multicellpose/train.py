@@ -70,14 +70,16 @@ def _reshape_norm(data, channel_axis=None, normalize_params={"normalize": False}
 
     # 3. Channel-wise Normalization
     # For H&E + Transcripts, we usually want to normalize each channel to its own 1st/99th percentile
+    # Apply multimodal-aware normalization
     if normalize_params.get("normalize", False):
-        # We wrap the normalization in a loop to ensure each channel in the stack
-        # maintains its relative contrast independently.
+        # SAFETY: Ensure percentile is not None
+        if normalize_params.get("percentile") is None:
+            normalize_params["percentile"] = [1.0, 99.0]
+
         normalized_data = []
         for td in data_new:
-            # Custom normalization path: apply to each channel separately
-            # This prevents the H&E signal from over-shadowing sparse transcripts
             for c in range(td.shape[0]):
+                # Now passing the fixed normalize_params
                 td[c] = normalize_img(td[c], **normalize_params)
             normalized_data.append(td)
         return normalized_data
