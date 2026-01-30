@@ -41,7 +41,8 @@ class Transformer(nn.Module):
         if self.dtype != torch.float32:
             self.to(self.dtype)
 
-    def forward(self, x):      
+    def forward(self, x):
+        x = x.float()
         # Forward pass remains similar, but now handles x with N channels
         x = self.encoder.patch_embed(x)
         if self.encoder.pos_embed is not None:
