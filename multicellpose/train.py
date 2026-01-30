@@ -468,7 +468,7 @@ def train_seg(net, train_data=None, train_labels=None, train_files=None,
             if channel_dropout > 0:
                 for b in range(n_batch):
                     if np.random.rand() < channel_dropout:
-                        c_to_drop = np.random.randint(1, nchan) if n_chan > 1 else 0
+                        c_to_drop = np.random.randint(1, n_chan) if n_chan > 1 else 0
                         imgi[b, c_to_drop] = 0
                     if channel_permutation and n_chan > 2:
                         for b in range(n_batch):
