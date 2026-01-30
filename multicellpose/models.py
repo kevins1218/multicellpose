@@ -143,6 +143,8 @@ class CellposeModel():
         dtype = torch.bfloat16 if use_bfloat16 else torch.float32
         self.net = Transformer(n_input_channels=nchan, dtype=dtype).to(self.device)
 
+        self.net.float()
+
         if os.path.exists(self.pretrained_model):
             models_logger.info(f">>>> loading model {self.pretrained_model}")
             self.net.load_model(self.pretrained_model, device=self.device)
