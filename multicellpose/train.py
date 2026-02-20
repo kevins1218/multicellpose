@@ -6,7 +6,7 @@ from multicellpose.transforms import normalize_img, random_rotate_and_resize
 from pathlib import Path
 import torch
 from torch import nn
-from tqdm import trange
+from tqdm import tqdm, trange
 
 import logging
 
@@ -447,12 +447,16 @@ def train_seg(net, train_data=None, train_labels=None, train_files=None,
         for param_group in optimizer.param_groups:
             param_group["lr"] = LR[iepoch] # set learning rate
         net.train()
-        for k in range(0, nimg_per_epoch, batch_size):
+
+        pbar = tqdm(range(0, nimg_per_epoch, batch_size), desc=f"Epoch {iepoch}")
+
+        for k in pbar:
             kend = min(k + batch_size, nimg_per_epoch)
             inds = rperm[k:kend]
             imgs, lbls = _get_batch(inds, data=train_data, labels=train_labels,
                                     files=train_files, labels_files=train_labels_files,
                                     **kwargs)
+
             diams = np.array([diam_train[i] for i in inds])
             rsc = diams / net.diam_mean.item() if rescale else np.ones(
                 len(diams), "float32")
@@ -483,6 +487,8 @@ def train_seg(net, train_data=None, train_labels=None, train_files=None,
             if X.dtype != net.dtype:
                 X = X.to(net.dtype)
                 lbl = lbl.to(net.dtype)
+            if X.shape[1] > net.nchan:
+                X = X[:, :net.nchan, :, :]
 
             y = net(X)[0]
             loss = _loss_fn_seg(lbl, y, device)
@@ -492,8 +498,14 @@ def train_seg(net, train_data=None, train_labels=None, train_files=None,
             optimizer.zero_grad()
             loss.backward()
             optimizer.step()
+
             train_loss = loss.item()
+            pbar.set_postfix({"batch_loss": f"{train_loss:.4f}"})
+
             train_loss *= len(imgi)
+            lavg += train_loss
+            nsum += len(imgi)
+            train_losses[iepoch] += train_loss
 
             # keep track of average training loss across epochs
             lavg += train_loss
