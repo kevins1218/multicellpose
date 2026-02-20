@@ -13,6 +13,8 @@ class Transformer(nn.Module):
                   checkpoint=None, dtype=torch.float32):
         super(Transformer, self).__init__()
 
+        self.nchan = n_input_channels
+
         # Instantiate the SAM encoder
         self.encoder = sam_model_registry[backbone](checkpoint).image_encoder
         n_embed = self.encoder.patch_embed.proj.out_channels # Latent dim (e.g. 1024)
